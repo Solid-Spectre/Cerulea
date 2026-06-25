@@ -1,0 +1,199 @@
+/* Heroes of Cerulea — Hero Sheet
+   Palette pulled from the rulebook: cerulean blue headers on black bars,
+   cream panel, NES-cartridge framing. Owlbear popovers are dark by default,
+   so the sheet sits in its own framed "cartridge" panel. */
+
+:root {
+  --ink:        #1a1a1a;
+  --panel:      #f4ead3;   /* cream interior, like the Heroes pages */
+  --panel-2:    #e7d9b8;
+  --cerulean:   #1f9fe0;   /* the CERULEA logo blue */
+  --cerulean-d: #0d6fa3;
+  --bar:        #111111;   /* black section bars */
+  --heart:      #1f5fd8;   /* hearts are blue-outlined in the book */
+  --energy:     #1f5fd8;
+  --lost:       #b8b8b8;
+  --gem:        #2fae54;
+  --red:        #c2342b;
+  --line:       #b9a981;
+  --focus:      #ffb01f;
+  font-size: 15px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #2a2a2a;
+  color: var(--ink);
+  font-family: ui-monospace, "DejaVu Sans Mono", "Courier New", monospace;
+  -webkit-font-smoothing: none;
+}
+
+/* ---- Cartridge frame ---- */
+.cartridge {
+  margin: 8px;
+  border: 3px solid #000;
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 2px var(--panel-2), 4px 4px 0 #000;
+  overflow: hidden;
+}
+
+.masthead {
+  background: #000;
+  padding: 10px 12px 12px;
+  text-align: center;
+}
+.masthead .heroes {
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 3px;
+  font-size: 0.78rem;
+}
+.masthead .cerulea {
+  color: var(--cerulean);
+  font-weight: 800;
+  letter-spacing: 4px;
+  font-size: 1.5rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+.masthead .tag {
+  color: #cbb88a;
+  font-size: 0.58rem;
+  letter-spacing: 2px;
+  margin-top: 5px;
+}
+
+.status {
+  font-size: 0.6rem;
+  color: var(--cerulean-d);
+  text-align: center;
+  padding: 4px;
+  background: var(--panel-2);
+  border-bottom: 2px solid var(--line);
+  min-height: 20px;
+}
+.status.saving { color: #8a6d1f; }
+.status.error  { color: var(--red); }
+
+.body { padding: 12px; }
+
+/* ---- Section header bars ---- */
+.bar {
+  background: var(--bar);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 2px;
+  font-size: 0.72rem;
+  padding: 6px 10px;
+  margin: 14px 0 8px;
+  border-radius: 3px;
+}
+.bar::before { content: "▶ "; color: var(--cerulean); }
+.section:first-child .bar { margin-top: 0; }
+
+/* ---- Identity fields ---- */
+.fields { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; }
+.fields label { font-size: 0.62rem; font-weight: 700; letter-spacing: 1px; color: var(--cerulean-d); text-transform: uppercase; }
+input[type="text"], textarea, select {
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: var(--ink);
+  background: #fffdf6;
+  border: 2px solid var(--line);
+  border-radius: 3px;
+  padding: 4px 6px;
+  width: 100%;
+}
+textarea { resize: vertical; min-height: 42px; line-height: 1.3; }
+input:focus, textarea:focus, select:focus { outline: 3px solid var(--focus); outline-offset: 0; border-color: var(--cerulean-d); }
+
+/* ---- Attributes ---- */
+.attrs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.attr {
+  background: #fffdf6;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  text-align: center;
+  padding: 6px 4px;
+}
+.attr .name { font-size: 0.6rem; font-weight: 800; letter-spacing: 1px; color: var(--cerulean-d); }
+.attr .ctl { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
+.attr .val { font-size: 1.2rem; font-weight: 800; min-width: 1.2em; }
+.step {
+  width: 24px; height: 24px; line-height: 1;
+  border: 2px solid var(--cerulean-d); background: var(--cerulean); color: #fff;
+  border-radius: 3px; font-weight: 800; font-size: 0.9rem; cursor: pointer;
+}
+.step:active { transform: translateY(1px); }
+.step:disabled { opacity: 0.35; cursor: default; }
+
+/* ---- Pip trackers (hearts / energy) ---- */
+.tracker { margin-bottom: 6px; }
+.tracker-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.tracker-head .lbl { font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; color: var(--cerulean-d); }
+.maxctl { display: flex; align-items: center; gap: 4px; font-size: 0.62rem; }
+.maxctl button {
+  width: 20px; height: 20px; border: 2px solid var(--line); background: #fffdf6;
+  border-radius: 3px; cursor: pointer; font-weight: 800; line-height: 1;
+}
+.pips { display: flex; flex-wrap: wrap; gap: 4px; }
+.pip {
+  width: 22px; height: 22px; cursor: pointer;
+  background: none; border: none; padding: 0; display: grid; place-items: center;
+}
+.pip svg { width: 22px; height: 22px; display: block; }
+.pip:focus-visible { outline: 3px solid var(--focus); border-radius: 3px; }
+
+/* ---- Counters row (gems / keys / snacks / meals / fragments) ---- */
+.counters { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.counter {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  background: #fffdf6; border: 2px solid var(--line); border-radius: 4px; padding: 5px 8px;
+}
+.counter .clabel { font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; color: var(--cerulean-d); display: flex; align-items: center; gap: 5px; }
+.counter .cval { display: flex; align-items: center; gap: 4px; }
+.counter input[type="number"] {
+  width: 48px; font-family: inherit; font-size: 0.82rem; text-align: center;
+  border: 2px solid var(--line); border-radius: 3px; padding: 2px; background: #fff;
+}
+.counter .pin { font-size: 0.85rem; }
+
+/* ---- Inventory ---- */
+.pouch-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.62rem; font-weight: 700; color: var(--cerulean-d); margin-bottom: 8px; }
+.slots { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.slot {
+  display: flex; align-items: center; gap: 6px;
+  border: 2px solid var(--line); border-radius: 4px; background: #fffdf6; padding: 3px 6px;
+}
+.slot .num { font-size: 0.6rem; font-weight: 800; color: var(--lost); min-width: 1.1em; }
+.slot.locked { opacity: 0.4; }
+.slot input { border: none; background: none; padding: 2px; }
+.slot input:focus { outline: 2px solid var(--focus); border-radius: 2px; }
+
+/* ---- Actions reference ---- */
+.actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.action-chip {
+  font-size: 0.58rem; font-weight: 800; letter-spacing: 1px;
+  background: var(--bar); color: #fff; padding: 4px 7px; border-radius: 3px;
+}
+.action-chip::before { content: "▶"; color: var(--cerulean); margin-right: 4px; }
+
+/* ---- Footer controls ---- */
+.foot { display: flex; gap: 8px; margin-top: 16px; }
+.btn {
+  flex: 1; font-family: inherit; font-weight: 800; letter-spacing: 1px; font-size: 0.66rem;
+  border: 2px solid #000; border-radius: 4px; padding: 8px; cursor: pointer;
+  background: var(--cerulean); color: #fff; box-shadow: 2px 2px 0 #000;
+}
+.btn.secondary { background: var(--panel-2); color: var(--ink); }
+.btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #000; }
+
+.hint { font-size: 0.58rem; color: #8a7a55; margin-top: 6px; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .step:active, .btn:active { transform: none; }
+}

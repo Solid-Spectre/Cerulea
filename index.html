@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heroes of Cerulea — Hero Sheet</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="cartridge">
+    <div class="masthead">
+      <div class="heroes">HEROES OF</div>
+      <div class="cerulea">CERULEA</div>
+      <div class="tag">HERO SHEET</div>
+    </div>
+
+    <div class="status" id="status">Loading…</div>
+
+    <div class="body">
+      <!-- IDENTITY -->
+      <div class="section">
+        <div class="bar">HERO</div>
+        <div class="fields">
+          <label for="hero">Hero</label>
+          <input type="text" id="hero" data-field="hero" placeholder="Name your hero" />
+
+          <label for="player">Player</label>
+          <input type="text" id="player" data-field="player" />
+
+          <label for="kin">Kin</label>
+          <select id="kin" data-field="kin">
+            <option value="">—</option>
+            <option>Elf</option>
+            <option>Avian</option>
+            <option>Geon</option>
+            <option>Aquarian</option>
+            <option>Seedling</option>
+            <option>Missing</option>
+          </select>
+
+          <label for="special">Special</label>
+          <textarea id="special" data-field="special" placeholder="Kin special, starting item, notes…"></textarea>
+
+          <label for="hair">Hair</label>
+          <input type="text" id="hair" data-field="hair" />
+
+          <label for="clothes">Clothes</label>
+          <input type="text" id="clothes" data-field="clothes" />
+        </div>
+      </div>
+
+      <!-- ATTRIBUTES -->
+      <div class="section">
+        <div class="bar">ATTRIBUTES</div>
+        <div class="attrs" id="attrs"></div>
+      </div>
+
+      <!-- HEARTS & ENERGY -->
+      <div class="section">
+        <div class="bar">HEARTS &amp; ENERGY</div>
+        <div class="tracker" id="hearts-tracker"></div>
+        <div class="tracker" id="energy-tracker"></div>
+      </div>
+
+      <!-- RESOURCES -->
+      <div class="section">
+        <div class="bar">RESOURCES</div>
+        <div class="counters" id="counters"></div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="section">
+        <div class="bar">INVENTORY</div>
+        <label class="pouch-toggle">
+          <input type="checkbox" id="largePouch" data-field="largePouch" />
+          Large Pouch (8 slots)
+        </label>
+        <div class="slots" id="slots"></div>
+      </div>
+
+      <!-- ACTIONS reference -->
+      <div class="section">
+        <div class="bar">ACTIONS</div>
+        <div class="actions">
+          <span class="action-chip">ATTACK</span>
+          <span class="action-chip">DEFEND</span>
+          <span class="action-chip">USE ITEM</span>
+          <span class="action-chip">INSPECT</span>
+          <span class="action-chip">ESCAPE</span>
+          <span class="action-chip">TALK</span>
+          <span class="action-chip">OTHER</span>
+        </div>
+      </div>
+
+      <div class="foot">
+        <button class="btn secondary" id="exportBtn">Export</button>
+        <button class="btn" id="resetBtn">New hero</button>
+      </div>
+      <div class="hint" id="hint">Saved to your player profile in this room.</div>
+    </div>
+  </div>
+
+  <script type="module" src="sheet.js"></script>
+</body>
+</html>
