@@ -9,7 +9,19 @@
 let OBR = null;
 
 const META_KEY = "rodeo.cerulea.heroSheet/v1";
+const ROLL_CHANNEL = "rodeo.cerulea.heroSheet/roll";
 const ATTRS = ["might", "bravery", "insight"];
+
+// Action reference, with blurbs drawn from the rulebook (p.6-7).
+const ACTIONS = [
+  { name: "ATTACK",   attr: "MIGHT",   text: "Strike a monster or destroy an object. In melee combat this is dangerous unless the monster is STUNNED." },
+  { name: "DEFEND",   attr: "BRAVERY", text: "Dodge an attack or avoid a trap. On a successful DEFEND you don't lose any HEARTS." },
+  { name: "USE ITEM", attr: null,      text: "Apply a special item or eat something." },
+  { name: "INSPECT",  attr: "INSIGHT", text: "Take a closer look or try to find something hidden." },
+  { name: "ESCAPE",   attr: null,      text: "Run away from combat or break free." },
+  { name: "TALK",     attr: null,      text: "Chat with a friendly inhabitant." },
+  { name: "OTHER",    attr: null,      text: "Any action that doesn't fit into the categories above." },
+];
 const COUNTERS = [
   { key: "gems",      label: "Gems",      icon: "◆", max: 999 },
   { key: "keys",      label: "Keys",      icon: "⚷", max: 9 },
@@ -119,7 +131,8 @@ function renderAttrs() {
         <button class="step" data-attr="${a}" data-dir="-1" aria-label="Decrease ${a}">–</button>
         <span class="val">${state[a]}</span>
         <button class="step" data-attr="${a}" data-dir="1" aria-label="Increase ${a}">+</button>
-      </div>`;
+      </div>
+      <button class="roll-btn" data-roll="${a}" aria-label="Roll ${a}">ROLL</button>`;
     wrap.appendChild(div);
   });
 }
@@ -180,6 +193,95 @@ function renderSlots() {
 
 function escapeAttr(s) { return String(s).replace(/"/g, "&quot;"); }
 
+function renderActions() {
+  const wrap = $("#actions");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  ACTIONS.forEach((a, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "action-chip";
+    btn.dataset.action = String(i);
+    btn.setAttribute("aria-expanded", "false");
+    btn.textContent = a.name;
+    wrap.appendChild(btn);
+  });
+}
+
+// ---------- Dice rolling ----------
+// Heroes of Cerulea uses only D4s. Roll dice equal to the attribute value;
+// only the highest single die counts. With 0D or fewer, roll 2D and take the
+// LOWEST. Outcome: 1-2 fail, 3 success, 4 success, extra 4s = extra-success.
+function d4() { return 1 + Math.floor(Math.random() * 4); }
+
+function rollAttribute(attr) {
+  const value = state[attr] | 0;
+  let dice;
+  let usedLowest = false;
+  if (value >= 1) {
+    dice = Array.from({ length: value }, d4);
+  } else {
+    // 0D or fewer: roll 2D, use the lowest
+    dice = [d4(), d4()];
+    usedLowest = true;
+  }
+  const counted = usedLowest ? Math.min(...dice) : Math.max(...dice);
+  const fours = dice.filter((d) => d === 4).length;
+
+  let outcome;
+  if (counted <= 2) outcome = "Failed";
+  else if (counted === 3) outcome = "Success";
+  else outcome = fours > 1 ? `Extra success (×${fours})` : "Success";
+
+  return { attr, value, dice, counted, usedLowest, outcome };
+}
+
+function formatRoll(r) {
+  const hero = (state.hero || "Hero").trim() || "Hero";
+  const name = r.attr.toUpperCase();
+  const diceStr = r.dice.join(", ");
+  const pick = r.usedLowest ? "lowest" : "highest";
+  return `${hero} rolled ${name} (${r.usedLowest ? "0D→2D" : r.value + "D"}): [${diceStr}] → ${pick} ${r.counted} · ${r.outcome}`;
+}
+
+const ROLL_LOG_MAX = 8;
+const rollLog = [];
+
+function pushRoll(line, mine) {
+  rollLog.unshift({ line, mine, t: Date.now() });
+  if (rollLog.length > ROLL_LOG_MAX) rollLog.length = ROLL_LOG_MAX;
+  renderRollFeed();
+}
+
+function renderRollFeed() {
+  const feed = $("#roll-feed");
+  if (!feed) return;
+  if (rollLog.length === 0) { feed.hidden = true; feed.innerHTML = ""; return; }
+  feed.hidden = false;
+  feed.innerHTML = rollLog
+    .map((e) => `<div class="roll-line${e.mine ? " mine" : ""}">${escapeHtml(e.line)}</div>`)
+    .join("");
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function doRoll(attr) {
+  const r = rollAttribute(attr);
+  const line = formatRoll(r);
+  pushRoll(line, true);
+  // Broadcast to the room (only works inside Owlbear)
+  if (usingOBR && OBR && OBR.broadcast) {
+    try {
+      OBR.broadcast.sendMessage(ROLL_CHANNEL, { line }, { destination: "ALL" });
+    } catch (err) {
+      console.error("Roll broadcast failed", err);
+    }
+  }
+}
+
 function renderAll() {
   suppressSave = true;
   renderFields();
@@ -188,6 +290,7 @@ function renderAll() {
   renderTracker("#energy-tracker", "Energy", "maxEnergy", "lostEnergy", energySVG);
   renderCounters();
   renderSlots();
+  renderActions();
   suppressSave = false;
 }
 
@@ -216,6 +319,34 @@ document.addEventListener("input", (e) => {
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
+
+  if (btn.dataset.roll) {
+    doRoll(btn.dataset.roll);
+    return;
+  }
+
+  if (btn.dataset.action !== undefined) {
+    const idx = +btn.dataset.action;
+    const a = ACTIONS[idx];
+    const blurb = $("#action-blurb");
+    const wrap = $("#actions");
+    const wasActive = btn.classList.contains("active");
+    wrap.querySelectorAll(".action-chip").forEach((c) => {
+      c.classList.remove("active");
+      c.setAttribute("aria-expanded", "false");
+    });
+    if (wasActive) {
+      blurb.hidden = true;
+      blurb.innerHTML = "";
+    } else {
+      btn.classList.add("active");
+      btn.setAttribute("aria-expanded", "true");
+      const tag = a.attr ? `<span class="blurb-attr">${a.attr}</span>` : "";
+      blurb.innerHTML = `<span class="blurb-name">${a.name}</span>${tag}<span class="blurb-text">${a.text}</span>`;
+      blurb.hidden = false;
+    }
+    return;
+  }
 
   if (btn.dataset.attr) {
     const a = btn.dataset.attr;
@@ -316,6 +447,18 @@ function startWithOBR() {
     renderAll();
     suppressSave = false;
   });
+
+  // Listen for dice rolls broadcast by other players in the room.
+  if (OBR.broadcast && OBR.broadcast.onMessage) {
+    try {
+      OBR.broadcast.onMessage(ROLL_CHANNEL, (event) => {
+        const data = event && event.data;
+        if (data && typeof data.line === "string") pushRoll(data.line, false);
+      });
+    } catch (err) {
+      console.error("Roll listener failed", err);
+    }
+  }
 }
 
 // Render immediately so the sheet is usable even before/without Owlbear,

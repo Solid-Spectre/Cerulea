@@ -123,6 +123,29 @@ input:focus, textarea:focus, select:focus { outline: 3px solid var(--focus); out
 .attr .name { font-size: 0.6rem; font-weight: 800; letter-spacing: 1px; color: var(--cerulean-d); }
 .attr .ctl { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px; }
 .attr .val { font-size: 1.2rem; font-weight: 800; min-width: 1.2em; }
+.roll-btn {
+  margin-top: 5px; width: 100%;
+  font-family: inherit; font-weight: 800; letter-spacing: 1px; font-size: 0.56rem;
+  border: 2px solid #000; border-radius: 3px; padding: 4px 0; cursor: pointer;
+  background: var(--cerulean); color: #fff; box-shadow: 1px 1px 0 #000;
+}
+.roll-btn:active { transform: translate(1px, 1px); box-shadow: none; }
+.roll-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+
+.roll-feed {
+  margin-top: 8px;
+  background: #fffdf6;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 0.6rem;
+  line-height: 1.4;
+  max-height: 130px;
+  overflow-y: auto;
+}
+.roll-line { padding: 2px 0; border-bottom: 1px dashed var(--line); color: var(--ink); }
+.roll-line:last-child { border-bottom: none; }
+.roll-line.mine { color: var(--cerulean-d); font-weight: 700; }
 .step {
   width: 24px; height: 24px; line-height: 1;
   border: 2px solid var(--cerulean-d); background: var(--cerulean); color: #fff;
@@ -177,10 +200,33 @@ input:focus, textarea:focus, select:focus { outline: 3px solid var(--focus); out
 /* ---- Actions reference ---- */
 .actions { display: flex; flex-wrap: wrap; gap: 5px; }
 .action-chip {
+  font-family: inherit;
   font-size: 0.58rem; font-weight: 800; letter-spacing: 1px;
   background: var(--bar); color: #fff; padding: 4px 7px; border-radius: 3px;
+  border: 2px solid var(--bar); cursor: pointer; line-height: 1;
 }
 .action-chip::before { content: "▶"; color: var(--cerulean); margin-right: 4px; }
+.action-chip:active { transform: translateY(1px); }
+.action-chip.active { background: var(--cerulean); border-color: var(--cerulean-d); }
+.action-chip.active::before { color: #fff; }
+.action-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+
+.action-blurb {
+  margin-top: 8px;
+  background: #fffdf6;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  padding: 7px 9px;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.action-blurb .blurb-name { font-weight: 800; letter-spacing: 1px; color: var(--cerulean-d); margin-right: 6px; }
+.action-blurb .blurb-attr {
+  display: inline-block; font-size: 0.54rem; font-weight: 800; letter-spacing: 1px;
+  background: var(--cerulean); color: #fff; padding: 1px 5px; border-radius: 3px;
+  vertical-align: middle; margin-right: 6px;
+}
+.action-blurb .blurb-text { display: block; margin-top: 4px; color: var(--ink); }
 
 /* ---- Footer controls ---- */
 .foot { display: flex; gap: 8px; margin-top: 16px; }
