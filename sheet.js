@@ -599,11 +599,22 @@ async function boot() {
 
   OBR = mod.default || mod.OBR || mod;
 
-  // OBR.isReady is true only inside an Owlbear iframe. If we never become
-  // ready within a short window, fall back to local saving.
-  const fallbackTimer = setTimeout(() => {
+  // OBR.isAvailable is true (synchronously) when we're embedded in an Owlbear
+  // iframe. If it's false, we're genuinely standalone — go local immediately.
+  let available = false;
+  try { available = !!OBR.isAvailable; } catch (_) { available = false; }
+
+  if (!available) {
     if (!started) { started = true; startLocalFallback(); }
-  }, 1500);
+    return;
+  }
+
+  // We're inside Owlbear. Wait for onReady — give it a generous window, since
+  // the SDK + several extensions may take a moment to come up. Only fall back
+  // if onReady genuinely never fires.
+  const fallbackTimer = setTimeout(() => {
+    if (!started) { started = true; startLocalFallback("Couldn't reach Owlbear — saved in this browser"); }
+  }, 8000);
 
   try {
     OBR.onReady(() => {
