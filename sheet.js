@@ -590,7 +590,11 @@ setStatus("Connecting…");
 async function boot() {
   let mod = null;
   try {
-    mod = await import("https://esm.sh/@owlbear-rodeo/sdk@3");
+    // Load the Owlbear SDK from our own domain. We can't use a CDN like
+    // esm.sh because Owlbear serves the popover under a Content Security
+    // Policy that only allows scripts from 'self', so the SDK is vendored
+    // alongside this file as obr-sdk.js.
+    mod = await import("./obr-sdk.js");
   } catch (_) {
     // CDN blocked or offline — stay local.
     if (!started) { started = true; startLocalFallback(); }
