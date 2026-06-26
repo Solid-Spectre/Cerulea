@@ -307,8 +307,10 @@ function doRoll(attr) {
   const keep = usedLowest ? "kl1" : "kh1"; // keep lowest (0D) or highest
   const notation = `${count}d4${keep}`;
 
-  // If Dice+ is present, roll real 3D dice on the table and read them back.
-  if (usingOBR && dicePlusReady && OBR && OBR.broadcast) {
+  // Try Dice+ whenever we're in a room. We don't gate on the ready-check
+  // (extension load order races make it unreliable); instead we send the
+  // request and rely on the 4s fallback if Dice+ isn't actually present.
+  if (usingOBR && OBR && OBR.broadcast && OBR.player) {
     const rollId = `cerulea_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     pendingRolls.set(rollId, { attr, value, usedLowest });
     Promise.all([OBR.player.getId(), OBR.player.getName()])
@@ -556,11 +558,19 @@ function startWithOBR() {
         pendingRolls.delete(err.rollId);
         finishRoll(rollAttribute(pending.attr)); // fall back locally
       });
-      // Ask Dice+ if it's there.
-      OBR.broadcast.sendMessage("dice-plus/isReady", {
-        requestId: `cerulea_${Date.now()}`,
-        timestamp: Date.now(),
-      }, { destination: "ALL" });
+      // Ask Dice+ if it's there. Retry a few times since extension load
+      // order isn't guaranteed — Dice+ may boot after we do.
+      let readyTries = 0;
+      const askReady = () => {
+        if (dicePlusReady || readyTries >= 5) return;
+        readyTries++;
+        OBR.broadcast.sendMessage("dice-plus/isReady", {
+          requestId: `cerulea_${Date.now()}_${readyTries}`,
+          timestamp: Date.now(),
+        }, { destination: "ALL" });
+        setTimeout(askReady, 800);
+      };
+      askReady();
     } catch (err) {
       console.error("Dice+ integration setup failed", err);
     }
