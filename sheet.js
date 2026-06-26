@@ -10,6 +10,7 @@ let OBR = null;
 
 const META_KEY = "rodeo.cerulea.heroSheet/v1";
 const ROLL_CHANNEL = "rodeo.cerulea.heroSheet/roll";
+const DICE_PLUS_SOURCE = "rodeo.cerulea.heroSheet";
 const ATTRS = ["might", "bravery", "insight"];
 
 // Action reference, with blurbs drawn from the rulebook (p.6-7).
@@ -225,6 +226,11 @@ function rollAttribute(attr) {
     dice = [d4(), d4()];
     usedLowest = true;
   }
+  return buildRollResult(attr, value, dice, usedLowest);
+}
+
+// Shared outcome logic, used by both the internal roller and Dice+ results.
+function buildRollResult(attr, value, dice, usedLowest) {
   const counted = usedLowest ? Math.min(...dice) : Math.max(...dice);
   const fours = dice.filter((d) => d === 4).length;
 
@@ -244,8 +250,10 @@ function formatRoll(r) {
   return `${hero} rolled ${name} (${r.usedLowest ? "0D→2D" : r.value + "D"}): [${diceStr}] → ${pick} ${r.counted} · ${r.outcome}`;
 }
 
-const ROLL_LOG_MAX = 8;
+const ROLL_LOG_MAX = 6;
 const rollLog = [];
+const pendingRolls = new Map(); // rollId -> { attr, value, usedLowest }
+let dicePlusReady = false;
 
 function pushRoll(line, mine) {
   rollLog.unshift({ line, mine, t: Date.now() });
@@ -253,14 +261,25 @@ function pushRoll(line, mine) {
   renderRollFeed();
 }
 
+function clearRolls() {
+  rollLog.length = 0;
+  renderRollFeed();
+}
+
 function renderRollFeed() {
   const feed = $("#roll-feed");
   if (!feed) return;
-  if (rollLog.length === 0) { feed.hidden = true; feed.innerHTML = ""; return; }
-  feed.hidden = false;
-  feed.innerHTML = rollLog
-    .map((e) => `<div class="roll-line${e.mine ? " mine" : ""}">${escapeHtml(e.line)}</div>`)
-    .join("");
+  if (rollLog.length === 0) { feed.hidden = true; feed.innerHTML = ""; }
+  else {
+    feed.hidden = false;
+    feed.innerHTML = rollLog
+      .map((e) => `<div class="roll-line${e.mine ? " mine" : ""}">${escapeHtml(e.line)}</div>`)
+      .join("");
+  }
+  const clr = $("#clear-rolls");
+  if (clr) clr.hidden = rollLog.length === 0;
+  const head = $(".roll-head");
+  if (head) head.hidden = rollLog.length === 0;
 }
 
 function escapeHtml(s) {
@@ -268,11 +287,10 @@ function escapeHtml(s) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function doRoll(attr) {
-  const r = rollAttribute(attr);
+// Finish a roll: log it locally and broadcast to other Hero Sheets.
+function finishRoll(r) {
   const line = formatRoll(r);
   pushRoll(line, true);
-  // Broadcast to the room (only works inside Owlbear)
   if (usingOBR && OBR && OBR.broadcast) {
     try {
       OBR.broadcast.sendMessage(ROLL_CHANNEL, { line }, { destination: "ALL" });
@@ -280,6 +298,49 @@ function doRoll(attr) {
       console.error("Roll broadcast failed", err);
     }
   }
+}
+
+function doRoll(attr) {
+  const value = state[attr] | 0;
+  const usedLowest = value < 1;
+  const count = usedLowest ? 2 : value;
+  const keep = usedLowest ? "kl1" : "kh1"; // keep lowest (0D) or highest
+  const notation = `${count}d4${keep}`;
+
+  // If Dice+ is present, roll real 3D dice on the table and read them back.
+  if (usingOBR && dicePlusReady && OBR && OBR.broadcast) {
+    const rollId = `cerulea_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    pendingRolls.set(rollId, { attr, value, usedLowest });
+    Promise.all([OBR.player.getId(), OBR.player.getName()])
+      .then(([playerId, playerName]) => {
+        OBR.broadcast.sendMessage("dice-plus/roll-request", {
+          rollId,
+          playerId,
+          playerName: (state.hero || playerName || "Hero"),
+          rollTarget: "everyone",
+          diceNotation: notation,
+          showResults: true, // let Dice+ show its own 3D popup too
+          timestamp: Date.now(),
+          source: DICE_PLUS_SOURCE,
+        }, { destination: "ALL" });
+      })
+      .catch((err) => {
+        console.error("Dice+ request failed, rolling locally", err);
+        pendingRolls.delete(rollId);
+        finishRoll(rollAttribute(attr));
+      });
+    // Safety: if Dice+ never answers, fall back after 4s.
+    setTimeout(() => {
+      if (pendingRolls.has(rollId)) {
+        pendingRolls.delete(rollId);
+        finishRoll(rollAttribute(attr));
+      }
+    }, 4000);
+    return;
+  }
+
+  // No Dice+ — use the internal roller.
+  finishRoll(rollAttribute(attr));
 }
 
 function renderAll() {
@@ -405,6 +466,9 @@ $("#resetBtn").addEventListener("click", () => {
   save();
 });
 
+const clearRollsBtn = $("#clear-rolls");
+if (clearRollsBtn) clearRollsBtn.addEventListener("click", clearRolls);
+
 $("#exportBtn").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -457,6 +521,48 @@ function startWithOBR() {
       });
     } catch (err) {
       console.error("Roll listener failed", err);
+    }
+
+    // Detect Dice+ and listen for its results on our dedicated channel.
+    try {
+      OBR.broadcast.onMessage("dice-plus/isReady", (event) => {
+        const d = event && event.data;
+        if (d && d.ready === true) dicePlusReady = true;
+      });
+      OBR.broadcast.onMessage(`${DICE_PLUS_SOURCE}/roll-result`, (event) => {
+        const res = event && event.data;
+        if (!res || !res.rollId) return;
+        const pending = pendingRolls.get(res.rollId);
+        if (!pending) return; // not ours (another player's roll)
+        pendingRolls.delete(res.rollId);
+        // Pull every d4 face from the result groups (kept and dropped).
+        let dice = [];
+        const groups = res.result && res.result.groups;
+        if (Array.isArray(groups)) {
+          groups.forEach((g) => {
+            if (g && Array.isArray(g.dice)) {
+              g.dice.forEach((die) => { if (typeof die.value === "number") dice.push(die.value); });
+            }
+          });
+        }
+        if (dice.length === 0) dice = rollAttribute(pending.attr).dice; // safety
+        finishRoll(buildRollResult(pending.attr, pending.value, dice, pending.usedLowest));
+      });
+      OBR.broadcast.onMessage(`${DICE_PLUS_SOURCE}/roll-error`, (event) => {
+        const err = event && event.data;
+        if (!err || !err.rollId) return;
+        const pending = pendingRolls.get(err.rollId);
+        if (!pending) return;
+        pendingRolls.delete(err.rollId);
+        finishRoll(rollAttribute(pending.attr)); // fall back locally
+      });
+      // Ask Dice+ if it's there.
+      OBR.broadcast.sendMessage("dice-plus/isReady", {
+        requestId: `cerulea_${Date.now()}`,
+        timestamp: Date.now(),
+      }, { destination: "ALL" });
+    } catch (err) {
+      console.error("Dice+ integration setup failed", err);
     }
   }
 }

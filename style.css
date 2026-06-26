@@ -132,8 +132,21 @@ input:focus, textarea:focus, select:focus { outline: 3px solid var(--focus); out
 .roll-btn:active { transform: translate(1px, 1px); box-shadow: none; }
 .roll-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 
+.roll-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px; margin-bottom: 2px;
+}
+.roll-head-lbl { font-size: 0.6rem; font-weight: 800; letter-spacing: 1px; color: var(--cerulean-d); }
+.roll-clear {
+  font-family: inherit; font-size: 0.56rem; font-weight: 800; letter-spacing: 1px;
+  border: 2px solid var(--line); background: var(--panel-2); color: var(--ink);
+  border-radius: 3px; padding: 2px 8px; cursor: pointer;
+}
+.roll-clear:active { transform: translateY(1px); }
+.roll-clear:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+
 .roll-feed {
-  margin-top: 8px;
+  margin-top: 4px;
   background: #fffdf6;
   border: 2px solid var(--line);
   border-radius: 4px;
