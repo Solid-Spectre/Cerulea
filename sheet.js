@@ -315,7 +315,7 @@ function doRoll(attr) {
     pendingRolls.set(rollId, { attr, value, usedLowest });
     Promise.all([OBR.player.getId(), OBR.player.getName()])
       .then(([playerId, playerName]) => {
-        OBR.broadcast.sendMessage("dice-plus/roll-request", {
+        const payload = {
           rollId,
           playerId,
           playerName: (state.hero || playerName || "Hero"),
@@ -324,16 +324,19 @@ function doRoll(attr) {
           showResults: true, // let Dice+ show its own 3D popup too
           timestamp: Date.now(),
           source: DICE_PLUS_SOURCE,
-        }, { destination: "ALL" });
+        };
+        console.log("[Cerulea] sending dice-plus/roll-request", payload);
+        OBR.broadcast.sendMessage("dice-plus/roll-request", payload, { destination: "ALL" });
       })
       .catch((err) => {
-        console.error("Dice+ request failed, rolling locally", err);
+        console.error("[Cerulea] Dice+ request failed, rolling locally", err);
         pendingRolls.delete(rollId);
         finishRoll(rollAttribute(attr));
       });
     // Safety: if Dice+ never answers, fall back after 4s.
     setTimeout(() => {
       if (pendingRolls.has(rollId)) {
+        console.warn("[Cerulea] Dice+ did not reply in 4s — falling back to internal roll", rollId);
         pendingRolls.delete(rollId);
         finishRoll(rollAttribute(attr));
       }
@@ -529,10 +532,11 @@ function startWithOBR() {
     try {
       OBR.broadcast.onMessage("dice-plus/isReady", (event) => {
         const d = event && event.data;
-        if (d && d.ready === true) dicePlusReady = true;
+        if (d && d.ready === true) { dicePlusReady = true; console.log("[Cerulea] Dice+ confirmed ready"); }
       });
       OBR.broadcast.onMessage(`${DICE_PLUS_SOURCE}/roll-result`, (event) => {
         const res = event && event.data;
+        console.log("[Cerulea] roll-result received", res);
         if (!res || !res.rollId) return;
         const pending = pendingRolls.get(res.rollId);
         if (!pending) return; // not ours (another player's roll)
